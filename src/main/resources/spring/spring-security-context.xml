@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans
+        xmlns="http://www.springframework.org/schema/beans"
+        xmlns:security="http://www.springframework.org/schema/security"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xmlns:p="http://www.springframework.org/schema/p"
+        xmlns:jee="http://www.springframework.org/schema/jee"
+        xsi:schemaLocation="
+            http://www.springframework.org/schema/security  http://www.springframework.org/schema/security/spring-security-3.2.xsd
+            http://www.springframework.org/schema/beans     http://www.springframework.org/schema/beans/spring-beans-3.2.xsd
+            http://www.springframework.org/schema/jee       http://www.springframework.org/schema/jee/spring-jee-3.2.xsd
+            http://www.springframework.org/schema/p         http://www.springframework.org/schema/jee/spring-p-3.2.xsd
+
+        "
+        >
+
+    <!-- security:http auto-config="true" security="none" pattern="/login.do"/> -->
+    <!--<security:http  pattern="/*" security="none"/>-->
+    <security:http auto-config="true" access-decision-manager-ref="accessDecisionManager">
+        <security:intercept-url pattern="/login" access="IS_AUTHENTICATED_ANONYMOUSLY"/>
+        <security:intercept-url pattern="/favicon*" access="IS_AUTHENTICATED_ANONYMOUSLY"/>
+        <security:intercept-url pattern="/**" access="IS_AUTHENTICATED_ANONYMOUSLY" />
+        <security:intercept-url pattern="/usercab/**" access="ROLE_ADMIN,ROLE_USER" />
+
+        <security:form-login login-page="/login"/>
+        <security:logout logout-url="/logout" logout-success-url="/"/>
+        <security:access-denied-handler error-page="/error/403"/>
+        <security:remember-me key="muza-AppKey-eb9945124e8c32601ded840e71ebe3ad" token-validity-seconds="864000"/>
+
+    </security:http>
+
+  <bean id="accessDecisionManager" class="org.springframework.security.access.vote.AffirmativeBased">
+      <property name="decisionVoters">
+          <list>
+              <bean class="org.springframework.security.web.access.expression.WebExpressionVoter"/>
+              <bean class="org.springframework.security.access.vote.RoleVoter">
+                  <property name="rolePrefix" value="ROLE_"/> 
+                  <!-- Above is the default behaviour. Mentioning just in case if someone wants to have different prefix
+                       or no prefix at all. This is specially useful when you want to validate against privileges instead
+                       of roles.(i.e. You have dynamically defined roles against a set of pre-defined privileges.) -->
+              </bean>
+              <bean class="org.springframework.security.access.vote.AuthenticatedVoter"/>
+          </list>
+      </property>
+  </bean>
+
+    <security:authentication-manager>
+        <security:authentication-provider ref="daoAuthenticationProvider"/>
+    </security:authentication-manager>
+    
+    <bean id="daoAuthenticationProvider" class="org.springframework.security.authentication.dao.DaoAuthenticationProvider">
+          <property name="userDetailsService" ref="userServiceImpl"/>
+          <property name="passwordEncoder" ref="passwordEncoder"/>
+    </bean>
+    
+    <bean id="passwordEncoder" class="org.springframework.security.authentication.encoding.Md5PasswordEncoder"/>
+    <bean id="webexpressionHandler" class="org.springframework.security.web.access.expression.DefaultWebSecurityExpressionHandler" />
+
+</beans>

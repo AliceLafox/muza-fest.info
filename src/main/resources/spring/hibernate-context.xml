@@ -1,0 +1,88 @@
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:context="http://www.springframework.org/schema/context"
+
+       xsi:schemaLocation="
+        http://www.springframework.org/schema/beans     http://www.springframework.org/schema/beans/spring-beans-4.1.xsd
+        http://www.springframework.org/schema/tx        http://www.springframework.org/schema/tx/spring-tx-4.1.xsd
+        http://www.springframework.org/schema/aop       http://www.springframework.org/schema/aop/spring-aop-4.1.xsd
+        http://www.springframework.org/schema/context   http://www.springframework.org/schema/context/spring-context-4.1.xsd
+        "
+       default-autowire="byName">
+
+    <bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <property name="location" value="classpath:db.properties"/>
+    </bean>
+
+    <bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource">
+        <property name="driverClassName" value="${db.driverClassName}" />
+        <property name="url" value="${db.url}" />
+        <property name="username" value="${db.username}" />
+        <property name="password" value="${db.password}" />
+    </bean>
+
+    <tx:annotation-driven transaction-manager="transactionManager" proxy-target-class="true"  />
+
+    <bean id="transactionManager" class="org.springframework.orm.hibernate4.HibernateTransactionManager">
+        <property name="sessionFactory" ref="sessionFactory" />
+    </bean>
+
+    <bean id="sessionFactory"   class="org.springframework.orm.hibernate4.LocalSessionFactoryBean">
+        <property name="dataSource" ref="dataSource" />
+        <property name="packagesToScan" value="net.lafox.muza.entity" />
+        <property name="hibernateProperties">
+            <props>
+                <prop key="hibernate.dialect">${hibernate.dialect}</prop>
+                <prop key="hibernate.show_sql">${hibernate.show_sql}</prop>
+                <prop key="hibernate.hbm2ddl.auto">${hibernate.hbm2ddl.auto}</prop>
+                <prop key="hibernate.connection.zeroDateTimeBehavior">convertToNull</prop>
+
+<!--
+                <prop key="hibernate.dbcp.maxActive">2</prop>
+                <prop key="hibernate.dbcp.maxIdle">2</prop>
+                <prop key="hibernate.dbcp.maxWait">120000</prop>
+                <prop key="hibernate.dbcp.whenExhaustedAction">1</prop>
+                <prop key="hibernate.dbcp.testOnBorrow">true</prop>
+                <prop key="hibernate.dbcp.testOnReturn">true</prop>
+                <prop key="hibernate.dbcp.validationQuery">select 1;</prop>
+                <prop key="hibernate.dbcp.ps.maxActive">5</prop>
+                <prop key="hibernate.dbcp.ps.maxIdle">5</prop>
+                <prop key="hibernate.dbcp.ps.maxWait">180000</prop>
+                <prop key="hibernate.dbcp.ps.whenExhaustedAction">2</prop>
+
+                <prop key="hibernate.cache.region.factory_class">org.hibernate.cache.ehcache.EhCacheRegionFactory</prop>
+                <prop key="hibernate.cache.use_second_level_cache">true</prop>
+                <prop key="hibernate.cache.use_query_cache">true</prop>
+-->
+            </props>
+        </property>
+    </bean>
+
+   <tx:advice id="txAdvice" transaction-manager="transactionManager">
+        <tx:attributes>
+            <tx:method name="get*" read-only="true" propagation="SUPPORTS"/>
+            <tx:method name="tran*" read-only="false" propagation="MANDATORY" isolation="READ_COMMITTED"/>
+            <tx:method name="save*" read-only="false" propagation="REQUIRED" isolation="READ_COMMITTED"/>
+            <tx:method name="update*" read-only="false" propagation="REQUIRED" isolation="READ_COMMITTED"/>
+            <tx:method name="insert*" read-only="false" propagation="REQUIRED" isolation="READ_COMMITTED"/>
+            <tx:method name="delete*" read-only="false" propagation="REQUIRED" isolation="READ_COMMITTED"/>
+            <tx:method name="logic*" read-only="false" propagation="REQUIRED" isolation="READ_COMMITTED"/>
+            <tx:method name="*" propagation="SUPPORTS"/>
+        </tx:attributes>
+    </tx:advice>
+
+    <aop:config >
+        <aop:pointcut id="serviceOperations" expression="execution(* net.lafox.muza.service.*ServiceImpl.*(..)) || execution(* net.lafox.generic.GenericServiceAbstract.*(..))"/>
+        <aop:advisor advice-ref="txAdvice" pointcut-ref="serviceOperations"/>
+    </aop:config>
+
+    <bean id="transactionProxy" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean" abstract="true">
+        <property name="transactionManager" ref="transactionManager"/>
+        <property name="transactionAttributeSource">
+            <bean class="org.springframework.transaction.annotation.AnnotationTransactionAttributeSource"/>
+        </property>
+    </bean>
+
+</beans>
